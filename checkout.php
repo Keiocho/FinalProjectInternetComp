@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 try {
-    // Step 1: Get cart items
+    // Gets the cart items
     $stmt = $conn->prepare("
         SELECT c.quantity, b.price, c.book_id
         FROM cart c
@@ -26,13 +26,13 @@ try {
         exit();
     }
 
-    // Step 2: Calculate total
+    // Calculates the total
     $total = 0;
     foreach ($items as $item) {
         $total += $item['price'] * $item['quantity'];
     }
 
-    // Step 3: Insert into orders table
+    // Inserts into the orders table
     $insertOrder = $conn->prepare("
         INSERT INTO orders (user_id, order_date, total_amount)
         VALUES (:user_id, NOW(), :total)
@@ -41,7 +41,7 @@ try {
     $insertOrder->bindParam(':total', $total);
     $insertOrder->execute();
 
-    // Step 4: Clear cart
+    // Clears the cart
     $deleteCart = $conn->prepare("DELETE FROM cart WHERE user_id = :user_id");
     $deleteCart->bindParam(':user_id', $user_id);
     $deleteCart->execute();
