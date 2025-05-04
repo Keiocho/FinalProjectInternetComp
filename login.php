@@ -8,26 +8,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
     $password = $_POST['password'];
 
-    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    try {
+        $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if ($user = $result->fetch_assoc()) {
-        if (password_verify($password, $user['password'])) {
+        if ($user && password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['first_name'] = $user['first_name'];
             $_SESSION['is_admin'] = $user['is_admin'];
-            header("Location: index.php");
+
+            // If admin, goes to the admin panel
+            if ($user['is_admin']) {
+                header("Location: admin_dashboard.php");
+            } else {
+                header("Location: index.php");
+            }
             exit();
         } else {
-            $error = "incorrect password.";
+            $error = "invalid email or password.";
         }
-    } else {
-        $error = "no user found with that email.";
+    } catch (PDOException $e) {
+        $error = "login error: " . $e->getMessage();
     }
-
-    $stmt->close();
 }
 ?>
 
@@ -114,11 +118,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <input type="password" name="password" placeholder="password" required>
         <button type="submit">log in</button>
         <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
+            <div class="error"><?= $error ?></div>
         <?php endif; ?>
     </form>
     <a href="register.php">need an account?</a>
-    <a href="javascript:history.back()">← go back</a>
 </div>
 </body>
 </html>
