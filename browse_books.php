@@ -1,14 +1,24 @@
 <?php
+session_start();
 include('database.php');
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $searchQuery = "%{$search}%";
 
-$sql = "SELECT * FROM book_database WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? OR course LIKE ?";
-$stmt = mysqli_prepare($conn, $sql);
-mysqli_stmt_bind_param($stmt, "ssss", $searchQuery, $searchQuery, $searchQuery, $searchQuery);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
+try {
+    $stmt = $conn->prepare("
+        SELECT * FROM book_database
+        WHERE title LIKE :search
+        OR author LIKE :search
+        OR isbn LIKE :search
+        OR course LIKE :search
+    ");
+    $stmt->bindParam(':search', $searchQuery);
+    $stmt->execute();
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("❌ Search failed: " . $e->getMessage());
+}
 
 $imageMap = [
     "harry potter and the sorcerer's stone" => "sorcerersstone.jpg",
@@ -42,11 +52,32 @@ $imageMap = [
             padding: 20px;
         }
 
+        .nav-bar {
+            background-color: #000;
+            padding: 10px 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-bar a {
+            color: #fff;
+            text-decoration: none;
+            font-family: 'Cinzel', serif;
+            text-transform: lowercase;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+
+        .nav-bar a:hover {
+            color: #ccc;
+            text-decoration: underline;
+        }
+
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-top: 20px;
         }
 
         .header h1 {
@@ -84,7 +115,7 @@ $imageMap = [
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 40px;
-            padding-top: 20px;
+            padding-top: 30px;
         }
 
         .book-card {
@@ -156,6 +187,20 @@ $imageMap = [
 </head>
 <body>
 
+<!-- Navigation -->
+<div class="nav-bar">
+    <a href="index.php">home</a>
+    <a href="browse_books.php">browse</a>
+    <a href="view_cart.php">cart</a>
+    <?php if (isset($_SESSION['user_id'])): ?>
+        <a href="logout.php">logout</a>
+    <?php else: ?>
+        <a href="login.php">login</a>
+        <a href="register.php">register</a>
+    <?php endif; ?>
+</div>
+
+<!-- Header and Search -->
 <div class="header">
     <h1>search results</h1>
     <form action="browse_books.php" method="get">
@@ -164,8 +209,9 @@ $imageMap = [
     </form>
 </div>
 
+<!-- Book Grid -->
 <div class="book-grid">
-    <?php while ($book = mysqli_fetch_assoc($result)) { 
+    <?php foreach ($result as $book): 
         $titleKey = strtolower($book['title']);
         $imagePath = isset($imageMap[$titleKey]) ? $imageMap[$titleKey] : "default.jpg";
     ?>
@@ -180,7 +226,7 @@ $imageMap = [
                 </form>
             </div>
         </div>
-    <?php } ?>
+    <?php endforeach; ?>
 </div>
 
 </body>
