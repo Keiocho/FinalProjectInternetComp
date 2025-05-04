@@ -1,11 +1,16 @@
 <?php
+session_start();
 include('database.php');
 
-// Fetch 3 random books
-$sql = "SELECT * FROM book_database ORDER BY RAND() LIMIT 3";
-$result = mysqli_query($conn, $sql);
+// Fetch 3 random books using PDO
+try {
+    $stmt = $conn->query("SELECT * FROM book_database ORDER BY RAND() LIMIT 3");
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("❌ Error fetching books: " . $e->getMessage());
+}
 
-// Image map: lowercase title => image filename
+// Image lookup
 $imageMap = [
     "harry potter and the sorcerer's stone" => "sorcerersstone.jpg",
     "harry potter and the chamber of secrets" => "chamberofsecrets.jpg",
@@ -38,22 +43,24 @@ $imageMap = [
             padding: 20px;
         }
 
-        .top-bar {
+        .nav-bar {
+            background-color: #000;
+            padding: 10px 20px;
             display: flex;
-            justify-content: flex-end;
-            gap: 15px;
-            font-size: 14px;
-            margin-bottom: 5px;
+            gap: 20px;
         }
 
-        .top-bar a {
-            color: #000;
+        .nav-bar a {
+            color: #fff;
             text-decoration: none;
-            transition: color 0.3s ease;
+            font-family: 'Cinzel', serif;
+            text-transform: lowercase;
+            font-size: 14px;
+            transition: 0.3s;
         }
 
-        .top-bar a:hover {
-            color: #555;
+        .nav-bar a:hover {
+            color: #ccc;
             text-decoration: underline;
         }
 
@@ -174,42 +181,48 @@ $imageMap = [
 </head>
 <body>
 
-    <!-- Top Right Links -->
-    <div class="top-bar">
-        <a href="cart.php">cart</a>
+<!-- Navigation -->
+<div class="nav-bar">
+    <a href="index.php">home</a>
+    <a href="browse_books.php">browse</a>
+    <a href="view_cart.php">cart</a>
+    <?php if (isset($_SESSION['user_id'])): ?>
+        <a href="logout.php">logout</a>
+    <?php else: ?>
         <a href="login.php">login</a>
         <a href="register.php">register</a>
-    </div>
+    <?php endif; ?>
+</div>
 
-    <!-- Header and Search -->
-    <div class="header">
-        <h1>campuscart</h1>
-        <form action="browse_books.php" method="get">
-            <input type="text" name="search" placeholder="search for books...">
-            <button type="submit">search</button>
-        </form>
-    </div>
+<!-- Header and Search -->
+<div class="header">
+    <h1>campuscart</h1>
+    <form action="browse_books.php" method="get">
+        <input type="text" name="search" placeholder="search for books...">
+        <button type="submit">search</button>
+    </form>
+</div>
 
-    <!-- Book Grid -->
-    <h2 class="section-title">popular books of the day:</h2>
-    <div class="book-grid">
-        <?php while ($book = mysqli_fetch_assoc($result)) { 
-            $titleKey = strtolower($book['title']);
-            $imagePath = isset($imageMap[$titleKey]) ? $imageMap[$titleKey] : "default.jpg";
-        ?>
-            <div class="book-card">
-                <img src="<?php echo $imagePath; ?>" alt="cover of <?php echo htmlspecialchars($book['title']); ?>">
-                <div class="book-card-content">
-                    <h3><?php echo htmlspecialchars($book['title']); ?></h3>
-                    <p>by <?php echo htmlspecialchars($book['author']); ?></p>
-                    <form action="cart.php" method="post">
-                        <input type="hidden" name="book_id" value="<?php echo $book['book_id']; ?>">
-                        <button type="submit">add to cart</button>
-                    </form>
-                </div>
+<!-- Book Grid -->
+<h2 class="section-title">popular books of the day:</h2>
+<div class="book-grid">
+    <?php foreach ($result as $book): 
+        $titleKey = strtolower($book['title']);
+        $imagePath = isset($imageMap[$titleKey]) ? $imageMap[$titleKey] : "default.jpg";
+    ?>
+        <div class="book-card">
+            <img src="<?php echo $imagePath; ?>" alt="cover of <?php echo htmlspecialchars($book['title']); ?>">
+            <div class="book-card-content">
+                <h3><?php echo htmlspecialchars($book['title']); ?></h3>
+                <p>by <?php echo htmlspecialchars($book['author']); ?></p>
+                <form action="cart.php" method="post">
+                    <input type="hidden" name="book_id" value="<?php echo $book['book_id']; ?>">
+                    <button type="submit">add to cart</button>
+                </form>
             </div>
-        <?php } ?>
-    </div>
+        </div>
+    <?php endforeach; ?>
+</div>
 
 </body>
 </html>
