@@ -1,5 +1,7 @@
 <?php
+session_start();
 include('database.php');
+
 $error = '';
 $success = '';
 
@@ -7,29 +9,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $first = trim($_POST['first_name']);
     $last = trim($_POST['last_name']);
     $email = trim($_POST['email']);
-    $password = $_POST['password'];
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
-    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+    try {
+        // Check if email already exists
+        $stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
 
-    $check = $conn->prepare("SELECT * FROM users WHERE email = ?");
-    $check->bind_param("s", $email);
-    $check->execute();
-    $res = $check->get_result();
-
-    if ($res->num_rows > 0) {
-        $error = "email already in use.";
-    } else {
-        $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, is_admin) VALUES (?, ?, ?, ?, 0)");
-        $stmt->bind_param("ssss", $first, $last, $email, $hashedPassword);
-
-        if ($stmt->execute()) {
-            $success = "account created! you can log in now.";
+        if ($stmt->fetch()) {
+            $error = "that email is already registered.";
         } else {
-            $error = "registration failed. try again.";
+            // Insert new user
+            $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, password, is_admin)
+                                    VALUES (:first, :last, :email, :password, 0)");
+            $stmt->execute([
+                ':first' => $first,
+                ':last' => $last,
+                ':email' => $email,
+                ':password' => $password
+            ]);
+
+            $success = "account created! you can now <a href='login.php'>log in</a>.";
         }
-        $stmt->close();
+    } catch (PDOException $e) {
+        $error = "registration error: " . $e->getMessage();
     }
-    $check->close();
 }
 ?>
 
@@ -64,7 +69,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             font-size: 24px;
         }
 
-        input[type="text"], input[type="password"], input[type="email"] {
+        input[type="text"], input[type="email"], input[type="password"] {
             width: 100%;
             padding: 10px;
             margin: 8px 0;
@@ -124,14 +129,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <input type="password" name="password" placeholder="password" required>
         <button type="submit">create account</button>
         <?php if ($error): ?>
-            <div class="error"><?php echo $error; ?></div>
-        <?php endif; ?>
-        <?php if ($success): ?>
-            <div class="success"><?php echo $success; ?></div>
+            <div class="error"><?= $error ?></div>
+        <?php elseif ($success): ?>
+            <div class="success"><?= $success ?></div>
         <?php endif; ?>
     </form>
     <a href="login.php">already have an account?</a>
-    <a href="javascript:history.back()">← go back</a>
 </div>
 </body>
 </html>
