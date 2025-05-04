@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 try {
-    // Fetch cart items and book details
+    // Fetches cart items and book details
     $stmt = $conn->prepare("
         SELECT c.quantity, b.title, b.author, b.price
         FROM cart c
@@ -92,6 +92,7 @@ try {
 
 <?php if (count($items) === 0): ?>
     <p style="text-align:center;">your cart is empty.</p>
+    <a href="browse_books.php" class="back-link">← continue browsing</a>
 <?php else: ?>
     <table>
         <tr>
