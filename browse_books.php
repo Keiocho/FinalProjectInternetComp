@@ -200,7 +200,7 @@ $imageMap = [
     <?php endif; ?>
 </div>
 
-<!-- Header and Search -->
+<!-- Header and search -->
 <div class="header">
     <h1>search results</h1>
     <form action="browse_books.php" method="get">
@@ -209,7 +209,7 @@ $imageMap = [
     </form>
 </div>
 
-<!-- Book Grid -->
+<!-- Book grid -->
 <div class="book-grid">
     <?php foreach ($result as $book): 
         $titleKey = strtolower($book['title']);
